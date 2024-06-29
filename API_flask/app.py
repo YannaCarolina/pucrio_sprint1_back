@@ -1,9 +1,12 @@
 from flask import Flask, jsonify, request # type: ignore
 import os
 from flask_sqlalchemy import SQLAlchemy # type: ignore
+from flasgger import Swagger
+
 
 
 app = Flask(__name__)
+swagger = Swagger(app)
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'app.db')
@@ -19,10 +22,6 @@ class Pet(db.Model):
     frequency = db.Column(db.String)
     health_info = db.Column(db.String)
     obs = db.Column(db.String)
-
-@app.route('/')
-def index():
-    return "Hello Yan"
 
 @app.route('/api/pets', methods = ["GET"]) #tenho uma rota que busco informações sobre os pets
 def get_pets():
