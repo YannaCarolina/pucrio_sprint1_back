@@ -1,12 +1,12 @@
 from flask import Flask, jsonify, request # type: ignore
 import os
 from flask_sqlalchemy import SQLAlchemy # type: ignore
-from flasgger import Swagger
+from flask_cors import CORS 
 
 
 
 app = Flask(__name__)
-swagger = Swagger(app)
+CORS(app)
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'app.db')
