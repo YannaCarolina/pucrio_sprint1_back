@@ -56,21 +56,16 @@ PUT /pets/<id>: Atualiza as informações de um pet específico.
 DELETE /pets/<id>: Remove um pet específico do cadastro.
 
 # Estrutura do Projeto
-arduino
-Copy code
-pet-creche-backend/
+BACK/
 │
-├── app/
-│   ├── __init__.py
-│   ├── routes.py
-│   ├── models.py
-│   └── ...
+├── api_flask/
+│   ├── app.db
+│   ├── app.py
+│   ├── init_db.py
+│   └── requirements.txt
 │
 ├── venv/
 │
-├── requirements.txt
-├── config.py
-├── run.py
 └── README.md
 
 # Contribuição
