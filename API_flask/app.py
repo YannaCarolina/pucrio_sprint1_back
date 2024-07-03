@@ -43,7 +43,13 @@ class Pet(db.Model):
     def serialize(self):
         return {
             'id': self.id,
-
+            'name': self.name,
+            'age': self.age,
+            'owner': self.owner,
+            'breed': self.breed,
+            'frequency': self.frequency,
+            'health_info': self.health_info,
+            'obs': self.obs,
         }
 
 @ns.route('/api/pets') #tenho uma rota que busco informações sobre os pets
@@ -53,11 +59,11 @@ class Petlist(Resource):
     @ns.marshal_list_with(pet)
     def get(self):
         pets = Pet.query.all() #traz todos os pets que tem no banco
-        print(dir(pets[0]))
-        print(pets[0].age)
+        #print(dir(pets[0]))
+        #print(pets[0].age)
        # return jsonify({'pets':[{'id': pet.id, 'name': pet.name, 'age': pet.age, 'owner': pet.owner, 'breed':pet.breed, 
        #              'frequency': pet.frequency, 'health_info': pet.health_info, 'obs': pet.obs} for pet in pets]}) #transforma a queryset em um json para rota, que nao reconhece pets. 
-        return jsonify(json_list=[pet.serialize for pet in Pet.query.all()])
+        return [pet.serialize for pet in Pet.query.all()]
 
 @ns.route('/api/add/<int:id>', methods = ["POST","PUT"])
 class PetResource(Resource):
@@ -82,8 +88,8 @@ class PetResource(Resource):
                     frequency = new_pet_data['frequency'], health_info = new_pet_data['health_info'], obs = new_pet_data['obs'])
         db.session.add(new_pet)
         db.session.commit()
-        return jsonify({'id': new_pet.id, 'name': new_pet.name, 'age': new_pet.age, 'owner': new_pet.owner, 'breed':new_pet.breed, 
-                        'frequency': new_pet.frequency, 'health_info': new_pet.health_info, 'obs': new_pet.obs})
+        return {'id': new_pet.id, 'name': new_pet.name, 'age': new_pet.age, 'owner': new_pet.owner, 'breed':new_pet.breed, 
+                        'frequency': new_pet.frequency, 'health_info': new_pet.health_info, 'obs': new_pet.obs}
 
 @app.route('/api/delete/<int:id>', methods = ["DELETE"])
 def delete_pet(id):
