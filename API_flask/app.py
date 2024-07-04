@@ -1,28 +1,11 @@
-from flask import Flask, jsonify, request # type: ignore
+from flask import Flask, jsonify, request
 import os
-from flask_sqlalchemy import SQLAlchemy # type: ignore
+from flask_sqlalchemy import SQLAlchemy
 from flask_restx import Api, Resource, fields
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask_cors import CORS 
-
-
+from flask_cors import CORS
 
 app = Flask(__name__)
-
-api = Api(app)
-
-ns = api.namespace('pets', description='Pets operations')
-
-pet = api.model('Pet', {
-    'id': fields.Integer(readonly=True, description='The pet unique identifier'),
-    'name': fields.String(required=True, description='The pet name'),
-    'age': fields.String(required=True, description='The pet age'),
-    'owner': fields.String(required=True, description="The owner's name"),
-    'breed': fields.String(required=True, description='The pet breed'),
-    'frequency': fields.String(required=True, description='The frequency of pet boarding'),
-    'health_info': fields.String(required=True, description='The pet health informations'),
-    'obs': fields.String(required=True, description='Other important details about the pet'),
-})
 CORS(app)
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -30,16 +13,18 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ap
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+
 class Pet(db.Model):
-    id = db.Column(db.Integer, primary_key = True)
-    name = db.Column(db.String)
-    age = db.Column(db.Integer) #birth_date
-    owner = db.Column(db.String)
-    breed = db.Column(db.String)
-    frequency = db.Column(db.String)
-    health_info = db.Column(db.String)
-    obs = db.Column(db.String)
-    @property 
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    owner = db.Column(db.String, nullable=False)
+    breed = db.Column(db.String, nullable=False)
+    frequency = db.Column(db.String, nullable=False)
+    health_info = db.Column(db.String, nullable=False)
+    obs = db.Column(db.String, nullable=False)
+
+    @property
     def serialize(self):
         return {
             'id': self.id,
@@ -52,57 +37,79 @@ class Pet(db.Model):
             'obs': self.obs,
         }
 
-@ns.route('/api/pets') #tenho uma rota que busco informações sobre os pets
-class Petlist(Resource):
-    '''Shows a list of all pets'''
-    @ns.doc('list_pets')
-    @ns.marshal_list_with(pet)
-    def get(self):
-        pets = Pet.query.all() #traz todos os pets que tem no banco
-        #print(dir(pets[0]))
-        #print(pets[0].age)
-       # return jsonify({'pets':[{'id': pet.id, 'name': pet.name, 'age': pet.age, 'owner': pet.owner, 'breed':pet.breed, 
-       #              'frequency': pet.frequency, 'health_info': pet.health_info, 'obs': pet.obs} for pet in pets]}) #transforma a queryset em um json para rota, que nao reconhece pets. 
-        return [pet.serialize for pet in Pet.query.all()]
+api = Api(app, version='1.0', title='Pet API', description='A simple CRUD API for pets', prefix='/api')
+ns = api.namespace('pets', description='Pets operations')
 
-@ns.route('/api/add/<int:id>', methods = ["POST","PUT"])
-class PetResource(Resource):
-    '''Add a pet'''
-    def post(id):
-        new_pet_data = request.get_json()
-        if id:
-            pet = Pet.query.get(id)
-            if not pet:
-                return jsonify({'message': 'Pet not found'}), 404
-            pet.name = new_pet_data['name']
-            pet.age = new_pet_data['age']
-            pet.owner = new_pet_data['owner']
-            pet.breed = new_pet_data['breed']
-            pet.frequency = new_pet_data['frequency']
-            pet.health_info = new_pet_data['health_info']
-            pet.obs = new_pet_data['obs']
-            db.session.commit()
-            return jsonify({'message': f'Pet {pet.name} updated successfully'})
-        #print(new_pet_data)
-        new_pet = Pet(name = new_pet_data['name'], age = new_pet_data['age'], owner = new_pet_data['owner'], breed = new_pet_data['breed'],
-                    frequency = new_pet_data['frequency'], health_info = new_pet_data['health_info'], obs = new_pet_data['obs'])
+pet_model = api.model('Pet', {
+    'id': fields.Integer(readonly=True, description='The pet unique identifier'),
+    'name': fields.String(required=True, description='The pet name'),
+    'age': fields.Integer(required=True, description='The pet age'),
+    'owner': fields.String(required=True, description="The owner's name"),
+    'breed': fields.String(required=True, description='The pet breed'),
+    'frequency': fields.String(required=True, description='The frequency of pet boarding'),
+    'health_info': fields.String(required=True, description='The pet health information'),
+    'obs': fields.String(required=True, description='Other important details about the pet'),
+})
+
+@ns.route('/')
+class PetList(Resource):
+    @ns.doc('list_pets')
+    @ns.marshal_list_with(pet_model)
+    def get(self):
+        pets = Pet.query.all()
+        return [pet.serialize for pet in pets]
+
+    @ns.doc('create_pet')
+    @ns.expect(pet_model)
+    @ns.marshal_with(pet_model, code=201)
+    def post(self):
+        new_pet_data = request.json
+        new_pet = Pet(
+            name=new_pet_data['name'],
+            age=new_pet_data['age'],
+            owner=new_pet_data['owner'],
+            breed=new_pet_data['breed'],
+            frequency=new_pet_data['frequency'],
+            health_info=new_pet_data['health_info'],
+            obs=new_pet_data['obs']
+        )
         db.session.add(new_pet)
         db.session.commit()
-        return {'id': new_pet.id, 'name': new_pet.name, 'age': new_pet.age, 'owner': new_pet.owner, 'breed':new_pet.breed, 
-                        'frequency': new_pet.frequency, 'health_info': new_pet.health_info, 'obs': new_pet.obs}
+        return new_pet.serialize, 201
 
-@app.route('/api/delete/<int:id>', methods = ["DELETE"])
-def delete_pet(id):
-    pet = Pet.query.get(id)
-    if not pet:
-        return jsonify({'message': 'Pet not found'}), 404
-    db.session.delete(pet)
-    db.session.commit()
-    return jsonify({'message': f'Pet {pet.name} deleted successfully'})
+@ns.route('/<int:id>')
+@ns.response(404, 'Pet not found')
+@ns.param('id', 'The pet identifier')
+class PetResource(Resource):
+    @ns.doc('get_pet')
+    @ns.marshal_with(pet_model)
+    def get(self, id):
+        pet = Pet.query.get_or_404(id)
+        return pet.serialize
 
+    @ns.doc('delete_pet')
+    @ns.response(204, 'Pet deleted')
+    def delete(self, id):
+        pet = Pet.query.get_or_404(id)
+        db.session.delete(pet)
+        db.session.commit()
+        return '', 204
 
-
-#ns.add_resource(Petlist, '/api/pets')
+    @ns.doc('update_pet')
+    @ns.expect(pet_model)
+    @ns.marshal_with(pet_model)
+    def put(self, id):
+        pet = Pet.query.get_or_404(id)
+        updated_data = request.json
+        pet.name = updated_data['name']
+        pet.age = updated_data['age']
+        pet.owner = updated_data['owner']
+        pet.breed = updated_data['breed']
+        pet.frequency = updated_data['frequency']
+        pet.health_info = updated_data['health_info']
+        pet.obs = updated_data['obs']
+        db.session.commit()
+        return pet.serialize
 
 if __name__ == '__main__':
     app.run(debug=True)
