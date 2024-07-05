@@ -1,4 +1,4 @@
-# pucrio_sprint1_back
+# Pet Management - Frontend
 Pasta do Backend da Sprint (Desenvolvimento Full Stack Básico)
 Pet Creche - Backend
 # Descrição
